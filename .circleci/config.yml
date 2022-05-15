@@ -3,30 +3,37 @@ version: 2.1
 # Use a package of configuration called an orb.
 # Orchestrate or schedule a set of jobs
 jobs:
-  print_hello:
+  save_hello_world_output:
     docker:
       - image: circleci/node:13.8.0
     steps:
+      - save_cache:
+        key: v1-myapp-{{ arch }}-{{ checksum "project.clj" }}
+        paths:
+        - /home/ubuntu/.m2
       - run: echo hello
-      - run:
-          name: "echo an env var that is part of our project"
-          command: |
-            echo $UDACITY_PROJECT # UDACITY_PROJECT
-            echo $MY_NAME # MY_NAME
-            echo $MY_CITY # MY_CITY
+      - run: echo "Saving to output file" > output.txt
+      - persist_to_workspace:
+          root: /tmp/dir
+          paths:
+            - foo/bar                       
             
-  print_world:
+  print_output_file:
     docker:
       - image: circleci/node:13.8.0
     steps:
-      - run: echo world
-      - run: echo My pipeline id is << pipeline.id >> and my git branch is << pipeline.git.branch >>.
+      # attach the files you persisted in the doing-things-job
+      - attach_workspace:
+          at: /tmp/dir # relative path to our working directory
+      - run: 
+          command: |
+            cat output.txt
 workflows:
   # Name the workflow "welcome"
   welcome:
     # Run the welcome/run job in its own container
     jobs:
-      - print_hello
-      - print_world:
+      - save_hello_world_output
+      - print_output_file:
           requires:
-            - print_hello
+            - save_hello_world_output
