@@ -1,55 +1,34 @@
 version: 2.1
 
-commands:
-  print_pipeline_id:
-    description: "A very simple command for demonstration purposes"
-    parameters:
-      value:
-        type: string
-        default: "Jonny"
-    steps:
-      - run: echo ${CIRCLE_WORKFLOW_ID}
-      - run: echo $value
-
 jobs:
-  save_hello_world_output:
+  build:
     docker:
       - image: circleci/node:13.8.0
     steps:
-      - run: echo "hello world" > ~/output.txt
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - output.txt
+      - checkout
+      - run: npm i
+      - run: npm run lint
+  test:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - run: npm i
+      - run: npm run test
+  analyze:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - run: npm audit
 
-  print_output_file:
-    docker:
-      - image: circleci/node:13.8.0
-    steps:
-      - attach_workspace:
-          at: ~/
-      - run: cat ~/output.txt
-      - run: |
-          if [[ `cat ~/output.txt` == "hello world" ]]; then
-            echo "It worked!";
-          else
-            echo "Nope!"; exit 1
-          fi
-  print_command:
-    docker:
-      - image: circleci/node:13.8.0
-    steps:
-      - run: exit 1
-      - run:
-          name: on error
-          command: echo "Hello Error!"
-          when: on_fail
-                
 workflows:
   my_workflow:
     jobs:
-      - print_command
-      # - save_hello_world_output
-      # - print_output_file:
-      #    requires:
-      #     - save_hello_world_output
+      - build
+      - test:
+          requires:
+            - build
+      - analyze:
+          requires:
+            - test
